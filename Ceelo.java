@@ -9,6 +9,7 @@ public class Ceelo {
   private final Scanner scanner = new Scanner(System.in);
   private final Roller banker = new Roller("The Banker", BANKER_CHIPS);
   private final ArrayList<Roller> rollers = new ArrayList<>();
+  private int deadPlayers = 0;
 
   public void run() throws IOException, InterruptedException {
     this.initialize();
@@ -33,9 +34,12 @@ public class Ceelo {
       } else {
         Util.printSuccess(this.banker.name + " has a total of " + this.banker.getChips() + " total chips");
 
+          
         for (Roller roller : rollers) {
-          if (roller.getChips() <= 0)
+          if (roller.getChips() <= 0) {
+            this.deadPlayers++;
             continue;
+          }
 
           int bet = this.getBet(roller);
           Util.printSuccess(roller.name + " has bet " + bet + " chips");
@@ -44,14 +48,27 @@ public class Ceelo {
           if (rollResult.getRollState() == RollResult.RollState.WIN) {
             if (!this.handleWin(roller, bet)) return;
           } else if (rollResult.getRollState() == RollResult.RollState.LOSS) {
-            if (!this.handleLoss(roller, bet)) continue;
+            if (!this.handleLoss(roller, bet)) {
+              if (this.deadPlayers >= this.rollers.size()) {
+                return;
+              }
+
+              continue;
+            }
           } else if (rollResult.getRollState() == RollResult.RollState.SCORE) {
             if (rollResult.getScoreDelta() > bankerResult.getScoreDelta()) {
               if (!this.handleWin(roller, bet)) return;
             } else if (rollResult.getScoreDelta() == bankerResult.getScoreDelta()) {
               Util.printAccent("Stale roll, the banker and the roller have the same score");
             } else {
-              if (!this.handleLoss(roller, bet)) continue;
+              if (!this.handleLoss(roller, bet)) {              
+                if (this.deadPlayers >= this.rollers.size()) {
+                  System.out.println("returning");
+                  return;
+                };
+
+                continue;
+              }
             }
           }
 
@@ -81,7 +98,9 @@ public class Ceelo {
     
     if (bet >= roller.getChips()) {
       Util.printError(roller.name + " is out of chips and has lost the game!");
-
+      this.deadPlayers++;
+      System.out.println(this.deadPlayers);
+      
       this.banker.incrementChips(roller.getChips());
       roller.incrementChips(roller.getChips() * -1);
       return false;
